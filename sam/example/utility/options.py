@@ -19,7 +19,7 @@ class Options():
         # self.parser.add_argument('--batchsize', type=int, default=64, help='input batch size.')
         self.parser.add_argument('--droplast', action='store_true', default=True, help='Drop last batch size.')
         self.parser.add_argument('--shuffle', action='store_true', default=True, help='data shuffling')
-        self.parser.add_argument('--isize', type=int, default=96, help='input image size.')
+        self.parser.add_argument('--isize', type=int, default=32, help='input image size.')
         self.parser.add_argument('--crsize', type=int, default=300, help='Center crop size.')
         self.parser.add_argument('--device', type=str, default='cpu', help='Device: gpu | cpu')
         self.parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0 0,1,2 0,2. use -1 for CPU')
