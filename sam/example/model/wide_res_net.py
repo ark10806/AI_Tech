@@ -56,10 +56,10 @@ class Block(nn.Module):
 
 
 class WideResNet(nn.Module):
-    def __init__(self, depth: int, width_factor: int, dropout: float, in_channels: int, labels: int):
+    def __init__(self, isize: int, depth: int, width_factor: int, dropout: float, in_channels: int, labels: int):
         super(WideResNet, self).__init__()
 
-        self.filters = [16, 1 * 16 * width_factor, 2 * 16 * width_factor, 4 * 16 * width_factor]
+        self.filters = [isize, 1 * isize * width_factor, 2 * isize * width_factor, 4 * isize * width_factor]
         self.block_depth = (depth - 4) // (3 * 2)
 
         self.f = nn.Sequential(OrderedDict([
