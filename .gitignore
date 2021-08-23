@@ -127,3 +127,16 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+
+# dataset
+dataset/
+
+#tensorboard
+tb/
+
+#ckpt
+ckpt/
+data/
+*.pkl
+MAAD_Face_1.0.pkl
