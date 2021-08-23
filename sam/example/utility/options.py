@@ -19,7 +19,7 @@ class Options():
         # self.parser.add_argument('--batchsize', type=int, default=64, help='input batch size.')
         self.parser.add_argument('--droplast', action='store_true', default=True, help='Drop last batch size.')
         self.parser.add_argument('--shuffle', action='store_true', default=True, help='data shuffling')
-        self.parser.add_argument('--isize', type=int, default=128, help='input image size.')
+        self.parser.add_argument('--isize', type=int, default=80, help='input image size.')
         self.parser.add_argument('--crsize', type=int, default=300, help='Center crop size.')
         self.parser.add_argument('--device', type=str, default='cpu', help='Device: gpu | cpu')
         self.parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0 0,1,2 0,2. use -1 for CPU')
@@ -38,7 +38,7 @@ class Options():
         # self.parser.add_argument('--lr', type=float, default=1e-2, help='learning rate for SGD')
 
         self.parser.add_argument("--adaptive", default=True, type=bool, help="True if you want to use the Adaptive SAM.")
-        self.parser.add_argument("--batch_size", default=64, type=int, help="Batch size used in the training and validation loop.")
+        self.parser.add_argument("--batch_size", default=32, type=int, help="Batch size used in the training and validation loop.")
         self.parser.add_argument("--n_class", default=18, type=int, help="number of classes")
         self.parser.add_argument('--fs', type=int, default=32, help='filter size to downsample')
         self.parser.add_argument("--depth", default=16, type=int, help="Number of layers.")
