@@ -23,11 +23,13 @@ max_acc = 0
 if __name__ == "__main__":
     opt = Options().parse()
 
-    initialize(opt, seed=42)
+    # initialize(opt, seed=42)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # dataset = Cifar(opt.batch_size, opt.threads)
     dataset = dataset.load_data(opt)
+    print(len(dataset['train']))
+    print(len(dataset['val']))
     log = Log(log_each=10)
     model = WideResNet(opt.fs, opt.depth, opt.width_factor, opt.dropout, in_channels=3, labels=opt.n_class).to(device)
 
@@ -37,19 +39,24 @@ if __name__ == "__main__":
 
     for epoch in range(opt.epochs):
         model.train()
-        log.train(len_dataset=len(dataset))
+        log.train(len_dataset=len(dataset['train']))
 
-        for batch in dataset:
+        for batch in dataset['train']:
             inputs, targets = (b.to(device) for b in batch)
+            # print(targets)
 
             # first forward-backward step
             predictions = model(inputs)
             loss = smooth_crossentropy(predictions, targets)
-            current_loss = loss.mean()
             loss.mean().backward()
             optimizer.first_step(zero_grad=True)
 
             # second forward-backward step
+            pred_train = model(inputs)
+            pred_train = torch.argmax(pred_train, 1)
+            # for idx, tg in enumerate(targets):
+            #     print(f'\t{tg:^4},{pred_train[idx]:^4}\t|', end='')
+            # print()
             smooth_crossentropy(model(inputs), targets).mean().backward()
             optimizer.second_step(zero_grad=True)
 
@@ -57,30 +64,33 @@ if __name__ == "__main__":
                 correct = torch.argmax(predictions.data, 1) == targets
                 log(model, loss.cpu(), correct.cpu(), scheduler.lr())
                 scheduler(epoch)
-                curr_acc = correct.cpu().sum().item()
-            
+                # print(correct.shape)
+                # print(curr_acc)
 
-            if (epoch > 1) and (min_loss > current_loss) and (max_acc+5 < curr_acc):
-                min_loss = current_loss
-                max_acc = curr_acc
+        model.eval()
+        log.eval(len_dataset=len(dataset['val']))
 
-                pth_tmp = os.path.join(opt.ckpt_path, f"{opt.ckpt_name + '_'+ str(epoch)+'_'+str(curr_acc)}.pth")
-                torch.save({
-                    'epoch': epoch + 1,
-                    'state_dict': model.state_dict()}, 
-                    pth_tmp
+        with torch.no_grad():
+            for batch in dataset['val']:
+                inputs, targets = (b.to(device) for b in batch)
+
+                predictions = model(inputs)
+                loss = smooth_crossentropy(predictions, targets)
+                current_loss = loss.mean()
+                correct = torch.argmax(predictions, 1) == targets
+                log(model, loss.cpu(), correct.cpu())
+                curr_acc = (correct.cpu().sum().item() / opt.batch_size) * 100
+        
+        if (epoch>5 and min_loss>current_loss and max_acc+5<curr_acc) or \
+            (epoch>10 and min_loss>current_loss and max_acc+0.1<curr_acc):
+            min_loss = current_loss
+            max_acc = curr_acc
+
+            pth_tmp = os.path.join(opt.ckpt_path, f"{opt.ckpt_name + '_'+ str(epoch)+'_'}{int(curr_acc*100)}.pth")
+            torch.save({
+                'epoch': epoch + 1,
+                'state_dict': model.state_dict()}, 
+                pth_tmp
                 )
-
-        # model.eval()
-        # log.eval(len_dataset=len(dataset.test))
-
-        # with torch.no_grad():
-        #     for batch in dataset.test:
-        #         inputs, targets = (b.to(device) for b in batch)
-
-        #         predictions = model(inputs)
-        #         loss = smooth_crossentropy(predictions, targets)
-        #         correct = torch.argmax(predictions, 1) == targets
-        #         log(model, loss.cpu(), correct.cpu())
 
     log.flush()

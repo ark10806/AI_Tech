@@ -31,7 +31,7 @@ class Options():
         # Train
         self.parser.add_argument('--print_freq', type=int, default=100, help='frequency of showing training results on console')
         self.parser.add_argument('--ckpt_path', type=str, default=os.path.join(os.getcwd(), 'weights'), help='path to save checkpoints')
-        self.parser.add_argument('--ckpt_name', type=str, default='1', help='checkpoint name')
+        self.parser.add_argument('--ckpt_name', type=str, default='2', help='checkpoint name')
         self.parser.add_argument('--ckpt_test', type=str, default='1', help='ckpt for test')
         # self.parser.add_argument('--epoch', type=int, default=500, help='number of epochs to train for')
         # self.parser.add_argument('--momentum', type=float, default=0.5, help='momentum of SGD')

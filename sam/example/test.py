@@ -26,7 +26,7 @@ if __name__ == "__main__":
     log = Log(log_each=10)
     model = WideResNet(opt.fs, opt.depth, opt.width_factor, opt.dropout, in_channels=3, labels=opt.n_class).to(device)
     ckpt_path = os.path.join(opt.ckpt_path, opt.ckpt_test)
-    ckpt = torch.load(ckpt_path)
+    ckpt = torch.load(ckpt_path + '.pth')
     model.state_dict(ckpt['state_dict'])
 
     base_optimizer = torch.optim.SGD
@@ -68,7 +68,7 @@ if __name__ == "__main__":
         #         )
 
         model.eval()
-        log.eval(len_dataset=len(dataset))
+        # log.eval(len_dataset=len(dataset))
 
         with torch.no_grad():
             for batch in dataset:
@@ -76,9 +76,10 @@ if __name__ == "__main__":
                 print(f'target: {targets}')
 
                 predictions = model(inputs)
-                print(predictions)
+                # print(predictions)
                 loss = smooth_crossentropy(predictions, targets)
                 correct = torch.argmax(predictions, 1) == targets
-                log(model, loss.cpu(), correct.cpu())
+                print(torch.argmax(predictions, 1))
+                # log(model, loss.cpu(), correct.cpu())
 
     log.flush()
