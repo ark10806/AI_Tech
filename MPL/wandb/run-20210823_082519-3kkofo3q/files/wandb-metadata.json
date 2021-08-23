@@ -1,0 +1,27 @@
+{
+    "os": "Linux-4.4.0-59-generic-x86_64-with-glibc2.10",
+    "python": "3.8.5",
+    "heartbeatAt": "2021-08-23T08:25:21.446200",
+    "startedAt": "2021-08-23T08:25:19.704404",
+    "docker": null,
+    "gpu": "Tesla V100-SXM2-32GB",
+    "gpu_count": 1,
+    "cpu_count": 8,
+    "cuda": null,
+    "args": [
+        "--name",
+        "test1"
+    ],
+    "state": "running",
+    "program": "main.py",
+    "codePath": "MPL/main.py",
+    "git": {
+        "remote": "https://github.com/ark10806/AI_Tech.git",
+        "commit": "fa746a50af8833a1f80c5975baf0c2a2e84dfab6"
+    },
+    "email": null,
+    "root": "/opt/ml/code/AI_Tech",
+    "host": "5dd6fbf2ac72",
+    "username": "root",
+    "executable": "/opt/conda/bin/python"
+}
