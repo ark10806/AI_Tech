@@ -138,6 +138,9 @@ tb/
 
 #ckpt
 ckpt/
+*.pth
 data/
 *.pkl
 MAAD_Face_1.0.pkl
+*.csv
+*.gz
