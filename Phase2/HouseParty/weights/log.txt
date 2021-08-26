@@ -1,0 +1,18 @@
+1. 
+
+Data.py
+cx = 17
+cy = 41
+cw = 367
+ch = 471
+
+without normalizing
+without suppliment
+
+128, 128, 160
+
+EnModel.py
+default, 512, 512
+
+
+11_97 for MaskModel

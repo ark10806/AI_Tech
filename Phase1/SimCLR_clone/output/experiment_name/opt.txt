@@ -1,0 +1,16 @@
+------------ Options -------------
+batchsize           : 4
+dataroot            : ./data/
+dataset             : cifar10
+device              : cpu
+droplast            : True
+epoch               : 100
+exname              : experiment_name
+gpu_ids             : [0]
+isize               : 32
+lr                  : 0.01
+momentum            : 0.5
+ngpu                : 1
+outf                : output
+print_freq          : 100
+-------------- End ---------------
