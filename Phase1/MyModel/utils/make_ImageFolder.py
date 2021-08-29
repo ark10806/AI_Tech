@@ -1,8 +1,8 @@
-import torch
 import pandas as pd
 import glob
 import os
 from PIL import Image
+from tqdm import tqdm
 '''
 input
     |
@@ -32,7 +32,7 @@ train
 '''
 base = '/opt/ml/input/'
 src = os.path.join(base, 'data/train')
-dst = os.path.join(base, 'new')
+dst = os.path.join(base, 'purified/train')
 
 if not os.path.isdir(dst):
     os.makedirs(dst)
@@ -61,7 +61,7 @@ def magical_hat(fe: list)-> str:
     return str(griffindor)
 
 tot = len(glob.glob(src + '/images/' + '**/*.*', recursive=True))
-for idx, img in enumerate(glob.glob(src + '/images/' + '**/*.*', recursive=True)):
+for img in tqdm(glob.glob(src + '/images/' + '**/*.*', recursive=True)):
     dir_name, ext = os.path.splitext(img)
     is_masked = dir_name.split('/')[-1]
     etc = dir_name.split('/')[-2].split('_')
@@ -77,9 +77,7 @@ for idx, img in enumerate(glob.glob(src + '/images/' + '**/*.*', recursive=True)
     with Image.open(img, 'r') as im:
         im.save(dst_path + ext)
     
-    if (idx+1) % 100 == 0:
-        print(f'[{idx+1: ^7} / {tot}: {(idx+1) / tot * 100: .2f}%]\t {dst_path.split("/")[-1]}')
 
-new = '/opt/ml/input/new/'
+new = '/opt/ml/input/purified/train'
 
 print(len(glob.glob(new + '**/*.jpg', recursive=True)))

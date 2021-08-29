@@ -1,4 +1,4 @@
-import data_without_album as data
+import data as data
 import timm
 from tqdm import tqdm
 import torch.nn as nn
@@ -6,20 +6,18 @@ import torch
 import numpy as np
 import os
 
-ex_num = 2
+ex_name = 'uniform'
 
-batch_size = 64
+batch_size = 128
 n_classes = 18
 n_epochs = 30
 lr = 1e-4
-model = timm.create_model("efficientnet_b4", pretrained=True)
+model = timm.create_model("efficientnet_b2", pretrained=True)
 for param in model.parameters():
     param.requires_grad = True
-outputs_attrs = n_classes
-num_inputs = model.classifier.in_features
-last_layer = nn.Linear(num_inputs, outputs_attrs)
-model.classifier = last_layer
-# print(model)
+model.classifier.out_features=n_classes
+stdv = 1 / model.classifier.in_features ** 0.5
+model.classifier.bias.data.uniform_(-stdv, stdv)
 
 normal_data = data.NormalLoader(isTrain=True, batch_size=batch_size)
 # normal_data = data.ProjectedLoader(name='age', isTrain=True, batch_size=batch_size)
@@ -32,21 +30,26 @@ print(device)
 
 if not os.path.isdir('./weight'):
     os.makedirs('./weight')
+if not os.path.isdir('./logs'):
+    os.makedirs('./logs')
 
 
 
-# def logger(msg: str):
-#     with open('./log{ex_num}', 'w') as f:
-#         f.wrtite(msg)
+def logger(fname:str, msg: str):
+    if os.path.isfile(f'./log_{fname}'):
+        with open(f'./logs/{fname}.txt', 'w') as f:
+            f.write('Epoch\tAcc\tLoss')
+    else:
+        with open(f'./logs/{fname}.txt', 'a') as f:
+            f.write(msg)
 
 best_accuracy = 0
-for epoch in tqdm(range(n_epochs)):
+for epoch in range(n_epochs):
     model.to(device)
     # model.train()
-    for images, labels in tqdm(normal_data['train']):
+    for images, labels in tqdm(normal_data['train'], desc=f'[Epoch: {epoch:>3}] {best_accuracy*100:.2f}%'):
         images = images.to(device)
         labels = labels.to(device)
-        # print(labels)
         
         outputs = model(images)
         loss = criterion(outputs, labels)
@@ -79,8 +82,8 @@ for epoch in tqdm(range(n_epochs)):
             best_accuracy = correct / total
             print('Test Accuracy of SpinalNet: {} % (improvement)'.format(100 * correct / total))
 
-            if best_accuracy * 100 > 70:
-                ckpt_path = os.path.join('./weight', f'{ex_num}{epoch}{int(best_accuracy*100)}.pth')
+            if best_accuracy * 100 > 90:
+                ckpt_path = os.path.join('./weight', f'ex{ex_name}_{epoch+1}_{int(best_accuracy*100)}%.pth')
                 torch.save({
                     'epoch': epoch + 1,
                     'state_dict': model.state_dict()},
@@ -88,5 +91,5 @@ for epoch in tqdm(range(n_epochs)):
                 print(f'\t{ckpt_path.split("/")[-1]} saved!')
             
         model.train()
-    # loggeer(f'[Epoch: {epoch:<3}]\t {correct/total * 100: .2f}  {loss:.6f}\n')
+    logger(ex_name, f'{epoch+1:<3}\t{correct/total * 100: .2f}%\t{loss:.6f}\n')
 

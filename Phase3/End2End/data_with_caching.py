@@ -111,25 +111,35 @@ class NormalDataset(Dataset):
         self.n_class = 18
         self.isTrain = isTrain
         self._get_xy()
+        self.cache = {}
 
     def __len__(self):
         return len(self.x)
     
     def __getitem__(self, idx):
         fname = self.x[idx].split('/')[-1]
-        X = np.array(Image.open(self.x[idx]))
-        X = self._preprocess(X)
         
         if self.isTrain:
+            if fname in self.cache:
+                X = self.cache[ fname ]
+            else:
+                X = np.array(Image.open(self.x[idx]))
+                X = self._preprocess(X)
+                self.cache[fname] = X
             X = baseA(image=X)['image']
             return X, self.y[idx]
         
         else:
+            X = np.array(Image.open(self.x[idx]))
+            X = self._preprocess(X)
+            X = baseA(image=X)['image']
             return X, fname
     
     def _preprocess(self, X: str)->Image:
         X = A.CenterCrop(centsize,centsize)(image=X)['image']
         X = A.Resize(256,256)(image=X)['image']
+        # X = ImageEnhance.Contrast(X).enhance(5)
+        # X = ImageEnhance.Color(X).enhance(0.8)
         return X
 
     def _get_xy(self):
@@ -156,24 +166,36 @@ class ProjectedDataset(Dataset):
         self.n_class = 18
         self.isTrain = isTrain
         self._get_xy()
+        self.cache = {}
 
     def __len__(self):
         return len(self.x)
     
     def __getitem__(self, idx):
         fname = self.x[idx].split('/')[-1]
-        X = np.array(Image.open(self.x[idx]))
-        X = self._preprocess(X)
+        
         if self.isTrain:
+            if fname in self.cache:
+                X = self.cache[ fname ]
+            else:
+                X = np.array(Image.open(self.x[idx]))
+                X = self._preprocess(X)
+                self.cache[fname] = X
             X = transform_dict[self.name](image=X)['image']
             return X, self.y[idx]
         
         else:
+            X = np.array(Image.open(self.x[idx]))
+            X = self._preprocess(X)
+            X = transform_dict[self.name](image=X)['image']
             return X, fname
     
     def _preprocess(self, X)->Image:
         X = A.CenterCrop(centsize,centsize)(image=X)['image']
         X = A.Resize(256,256)(image=X)['image']
+
+        # X = ImageEnhance.Contrast(X).enhance(5)
+        # X = ImageEnhance.Color(X).enhance(0.8)
         return X
 
     def _get_xy(self):
