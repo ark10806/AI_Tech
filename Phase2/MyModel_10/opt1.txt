@@ -1,2 +1,0 @@
------------- Options -------------
-model_name	:		SpinGRAY4TEST_isTrain	:		True-------------- End ----------------

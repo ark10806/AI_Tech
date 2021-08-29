@@ -14,7 +14,7 @@ class Options():
 
         # Base
         self.parser.add_argument('--dataset', default='new', help='MNIST | new')
-        self.parser.add_argument('--dataroot', default='/opt/ml/input/purified/train')
+        self.parser.add_argument('--dataroot', default='/opt/ml/input/purified')
         self.parser.add_argument('--testroot', default='/opt/ml/input/purified/test')
         # self.parser.add_argument('--batchsize', type=int, default=64, help='input batch size.')
         self.parser.add_argument('--droplast', action='store_true', default=True, help='Drop last batch size.')
@@ -35,12 +35,17 @@ class Options():
         self.parser.add_argument('--ckpt_path', type=str, default=os.path.join(os.getcwd(), 'weights'), help='path to save checkpoints')
         self.parser.add_argument('--ckpt_test', type=str, default='1', help='ckpt for test')
         self.parser.add_argument('--isTrain', type=bool, default=False, help='save opt')
+        self.parser.add_argument('--sub_src', type=str, default='/opt/ml/input/data/eval/info.csv')
+        self.parser.add_argument('--nMAS', type=str, default='1', help='ckpt for test')
+        self.parser.add_argument('--nGEN', type=str, default='1', help='ckpt for test')
+        self.parser.add_argument('--nAGE', type=str, default='1', help='ckpt for test')
+
         # self.parser.add_argument('--epoch', type=int, default=500, help='number of epochs to train for')
         # self.parser.add_argument('--momentum', type=float, default=0.5, help='momentum of SGD')
         # self.parser.add_argument('--lr', type=float, default=1e-2, help='learning rate for SGD')
 
         self.parser.add_argument("--adaptive", default=True, type=bool, help="True if you want to use the Adaptive SAM.")
-        self.parser.add_argument("--batch_size", default=256, type=int, help="Batch size used in the training and validation loop.")
+        self.parser.add_argument("--batchsize", default=256, type=int, help="Batch size used in the training and validation loop.")
         self.parser.add_argument("--n_class", default=18, type=int, help="number of classes")
         self.parser.add_argument('--fs', type=int, default=16, help='filter size to downsample')
         self.parser.add_argument("--depth", default=18, type=int, help="Number of layers.")
@@ -53,7 +58,6 @@ class Options():
         self.parser.add_argument("--rho", default=0.5, type=int, help="Rho parameter for SAM.")
         self.parser.add_argument("--weight_decay", default=0.0005, type=float, help="L2 weight decay.")
         self.parser.add_argument("--width_factor", default=16, type=int, help="How many times wider compared to normal ResNet.")
-
         self.opt = None
 
 
@@ -68,6 +72,12 @@ class Options():
         #     torch.cuda.set_device(self.opt.gpu_ids[0])
         #     print(torch.cuda.get_device_name(0))
 
+        if not os.path.isdir(self.opt.ckpt_path):
+            os.makedirs(self.opt.ckpt_path)
+        if not os.path.isdir(self.opt.ckpt_path):
+            os.makedirs(self.opt.ckpt_path)
+        if not os.path.isdir(self.opt.ckpt_path):
+            os.makedirs(self.opt.ckpt_path)
         if not os.path.isdir(self.opt.ckpt_path):
             os.makedirs(self.opt.ckpt_path)
         if self.opt.isTrain:

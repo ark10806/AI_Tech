@@ -14,6 +14,8 @@ import pandas as pd
 options = Options()
 opt = options.parse()
 
+test_cycle = 10
+
 class MaskModel():
     def __init__(self, opt):
         torch.manual_seed(0)
@@ -85,9 +87,10 @@ class MaskModel():
                         print(f'\t{ckpt_path.split("/")[-1]} saved!')
 
                 options.logging(epoch+1, f'{best_accuracy*100: .2f}')
+
                     
                 self.model.train()
-
+    
     def test(self, weight: str):
         weight_path = os.path.join(opt.ckpt_path, self.name, weight)
         weight = torch.load(weight_path)
@@ -96,23 +99,22 @@ class MaskModel():
 
         test_loader = data.MaskLoader(dataroot=self.opt.dataroot, isTrain=False, batch_size=self.opt.batchsize)
 
-        submission = pd.read_csv(self.opt.sub_src)
+        # submission = pd.read_csv(self.opt.sub_src)
+        pred_dict = {}
         self.model.eval()
         with torch.no_grad():
             
             for images, fname in tqdm(test_loader, desc=f'{self.name} test'):
-
                 images = images.to(self.device)
                 # labels = labels.to(self.device)
         
                 outputs = self.model(images)
-                _, predicted = torch.max(outputs.data, 1)
+                _, predicted = torch.max(outputs, 1)
+                pred = predicted.cpu().detach().numpy()
 
-                for i in range(predicted.shape[0]):
-                    submission[fname[i]] = int(predicted[i]) * 6
-        # submission.to_csv(f'./submission.csv', index=False)
-        # print('test inference is done!')
-        return submission
+                for di in range(len(pred)):
+                    pred_dict[fname[di]] = int(pred[di]) * 6
+        return pred_dict
 
 
 
@@ -186,7 +188,7 @@ class GenderModel():
                 # model1.train()
                 self.model.train()
 
-    def test(self, weight: str, submission: pd.DataFrame):
+    def test(self, weight: str, pred_dict: dict):
         weight_path = os.path.join(opt.ckpt_path, self.name, weight)
         weight = torch.load(weight_path)
         self.model.load_state_dict(weight['state_dict'])
@@ -199,18 +201,18 @@ class GenderModel():
         with torch.no_grad():
             
             for images, fname in tqdm(test_loader, desc=f'{self.name} test'):
-
                 images = images.to(self.device)
                 # labels = labels.to(self.device)
         
                 outputs = self.model(images).detach()
                 _, predicted = torch.max(outputs.data, 1)
+                pred = predicted.cpu().detach().numpy()
 
-                for i in range(predicted.shape[0]):
-                    submission[fname[i]] = int(predicted[i]) * 3 + submission[fname[i]]
+                for di in range(len(pred)):
+                    pred_dict[fname[di]] = pred_dict[fname[di]] + int(pred[di]) * 3
         # submission.to_csv(f'./submission.csv', index=False)
         # print('test inference is done!')
-        return submission
+        return pred_dict
 
 
 
@@ -285,7 +287,7 @@ class AgeModel():
                 # model1.train()
                 self.model.train()
 
-    def test(self, weight: str, submission: pd.DataFrame):
+    def test(self, weight: str, pred_dict: dict):
         weight_path = os.path.join(opt.ckpt_path, self.name, weight)
         weight = torch.load(weight_path)
         self.model.load_state_dict(weight['state_dict'])
@@ -298,14 +300,20 @@ class AgeModel():
         with torch.no_grad():
             
             for images, fname in tqdm(test_loader, desc=f'{self.name} test'):
-
                 images = images.to(self.device)
                 # labels = labels.to(self.device)
         
-                outputs = self.model(images).detach()
+                outputs = self.model(images)
                 _, predicted = torch.max(outputs.data, 1)
+                pred = predicted.cpu().detach().numpy()
 
-                for i in range(predicted.shape[0]):
-                    submission[fname[i]] = int(predicted[i]) + submission[fname[i]]
-        submission.to_csv(f'./submission.csv', index=False)
-        print('test inference is done!')
+
+                
+
+                for di in range(len(pred)):
+                    pred_dict[fname[di]] = pred_dict[fname[di]] + int(pred[di])
+                
+                # if idx > test_cycle:
+                #     return submission.to_csv(f'./submission.csv', index=False)
+            
+        return pred_dict

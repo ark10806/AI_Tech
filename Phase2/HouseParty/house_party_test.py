@@ -10,6 +10,7 @@ import os
 from EnModels import MaskModel, GenderModel, AgeModel
 import data
 from options import Options
+import pandas as pd
 
 '''
 ##
@@ -30,7 +31,7 @@ Age = AgeModel(opt)
 
 m_weight = "MASK1_11_97.pth"
 g_weight = "MASK1_10_'84.pth"
-a_weight = "MASK1_10_'78.pth"
+a_weight = "AgeModel1_6_85.pth"
 
 
 
@@ -41,8 +42,23 @@ mas_cls = Mask.test(m_weight)
 gen_cls = Gender.test(g_weight, mas_cls)
 # del gend_loader
 
-age_cls = Age.test(a_weight, gen_cls)
+# gen_cls = None
+
+pred_dict = Age.test(a_weight, gen_cls)
 # del age_loader
+
+
+
+
+sheet = pd.read_csv('/opt/ml/input/data/eval/info.csv')
+tmparr = []
+for k in sheet['ImageID']:
+    tmparr.append(pred_dict[k])
+sheet['ans'] = tmparr
+sheet.to_csv('./sub.csv', index=False)
+
+
+        # submission.to_csv(f'./submission.csv', index=False)
 
 
 

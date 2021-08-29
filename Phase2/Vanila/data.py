@@ -17,6 +17,7 @@ cx = 17
 cy = 41
 cw = 367
 ch = 471
+test_worker = 2
 
 # def load_dataset(dataroot):
 #     transform = transforms.Compose([
@@ -44,6 +45,20 @@ def train_val_dataset(dataset, val_split=0.2):
 #         T.ToTensor(),
 #     ])
 
+def VanilaLoader(batch_size):
+    dataset = train_val_dataset(VanilaDataset())
+
+    dataloader = {x: DataLoader(
+        dataset = dataset[x],
+        batch_size = batch_size,
+        shuffle = True,
+        num_workers = 4,
+        drop_last = False,
+    ) for x in ['train', 'val']}
+
+    return dataloader
+
+
 def MaskLoader(dataroot, isTrain, batch_size):
     if isTrain:
         dataset = train_val_dataset(MaskDataset(dataroot, isTrain))
@@ -63,7 +78,7 @@ def MaskLoader(dataroot, isTrain, batch_size):
             dataset = dataset,
             batch_size = batch_size,
             shuffle = True,
-            num_workers = 0,
+            num_workers = test_worker,
             drop_last = isTrain,
         )
     return dataloader
@@ -88,7 +103,7 @@ def GenderLoader(dataroot, isTrain, batch_size):
             dataset = dataset,
             batch_size = batch_size,
             shuffle = True,
-            num_workers = 0,
+            num_workers = test_worker,
             drop_last = isTrain,
         )
     return dataloader
@@ -113,10 +128,39 @@ def AgeLoader(dataroot, isTrain, batch_size):
             dataset = dataset,
             batch_size = batch_size,
             shuffle = True,
-            num_workers = 0,
+            num_workers = test_worker,
             drop_last = isTrain,
         )
     return dataloader
+
+class VanilaDataset(Dataset):
+    def __init__(self):
+        self.x = []
+        self.y = []
+        self.transform = T.Compose([
+                            T.RandomRotation((0,15)),
+                            T.Resize((128, 128)),
+                            T.RandomAutocontrast(0.3),
+                            T.RandomHorizontalFlip(0.5),
+                            T.ToTensor(),
+                        ])
+        self.samples = None
+
+        for cls in range(18):
+            cls_path = glob('/opt/ml/input/purified/train/{cls}/*.*', recursive=True)
+            print(cls_path)
+            self.x.extend(cls_path)
+            self.y.extend([cls] * len(cls_path) )
+
+    def __len__(self):
+        return len(self.x)
+    
+    def __getitem__(self, idx):
+        x = Image.open(self.x[idx])
+        y = x[idx].split('/')[-2]
+
+        return self.transform(x)
+
 
 
 class MaskDataset(Dataset):
@@ -224,7 +268,6 @@ class GenderDataset(Dataset):
             testroot = os.path.join(dataroot, 'test', '0')
             print(testroot)
             self.x = glob(f'{testroot}/' + '*.*')
-            self.samples = self.x[:]
 
 
     def __len__(self):
