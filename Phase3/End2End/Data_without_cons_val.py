@@ -1,31 +1,23 @@
-import torch
-import torch.nn
-import torchvision.transforms as T
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data import Subset
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 from glob import glob
-from PIL import Image, ImageEnhance
 import os
 import copy
-from options import Options
 import albumentations as A
 import albumentations.pytorch as AP
 import numpy as np
+from PIL import Image
+import random
 
-'''
-elastic 
-focal-loss,
-f1-loss
-'''
-masksize = 256
-gendsize = 256
-centsize = 320
-n_workers = {'train': 4, 'test': 0}
+dataroot = '/opt/ml/input/cropped'
+recur = False
 
-# IMAGENET_DEFAULT_MEAN = (0.485, 0.456, 0.406)
-# IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)
+#efficientnet_b2 256
+basesize = 256
+# centsize = 320
+n_workers = {'train': 4, 'test': 4}
 
 baseA = A.Compose([
     A.CoarseDropout(max_holes=3, max_height=40, max_width=40),
@@ -34,7 +26,7 @@ baseA = A.Compose([
     A.GaussNoise(),
     A.GridDistortion(),
     A.HorizontalFlip(),
-    A.Normalize(mean=(0.5601, 0.5241, 0.5014), std=(0.2331, 0.2430, 0.2456)),
+    A.Normalize(mean=(0.54892884,0.50471638,0.48014299), std=(0.23508963,0.24486722,0.24449045)),
     AP.transforms.ToTensorV2(),
 ])
 
@@ -52,62 +44,51 @@ def train_val_dataset(dataset, val_split=0.2):
     datasets['val'] = Subset(dataset, val_idx)
     return datasets
 
-def NormalLoader(isTrain, batch_size):
+
+
+def load_data(isTrain, batch_size, name=None, expand=False):
     if isTrain:
-        dataset = train_val_dataset(NormalDataset(isTrain))
+        if name in ['mask', 'gender', 'age']:
+            print('[Dataset]:\t ProjectedDataset loaded')
+            dataset = train_val_dataset(ProjectedDataset(name=name, isTrain=True))
+        elif expand:
+            print('[Dataset]:\t NormalDataset_oversampled loaded')
+            dataset = train_val_dataset(NormalDataset_oversampled(isTrain))
+        else:
+            print('[Dataset]:\t NormalDataset loaded')
+            dataset = train_val_dataset(NormalDataset(isTrain=True))
+        
 
         dataloader = {x: DataLoader(
             dataset = dataset[x],
             batch_size = batch_size,
             shuffle = True,
             num_workers = n_workers['train'],
-            drop_last = isTrain,
+            drop_last = True,
         ) for x in ['train', 'val']}
 
     else:
-        dataset = NormalDataset(isTrain)
+        if name in ['mask', 'gender', 'age']:
+            print('[Dataset]:\t ProjectedDataset for TEST loaded')
+            dataset = ProjectedDataset(name=name, isTrain=False)
+        else:
+            print('[Dataset]:\t NormalDataset for TEST loaded')
+            dataset = NormalDataset(isTrain=False)
 
         dataloader = DataLoader(
             dataset = dataset,
             batch_size = batch_size,
-            shuffle = True,
-            num_workers = n_workers['test'],
-            drop_last = isTrain,
-        )
-    return dataloader
-
-
-def ProjectedLoader(name, isTrain, batch_size):
-    if isTrain:
-        dataset = train_val_dataset(ProjectedDataset(name=name, isTrain=True))
-
-        dataloader = {x: DataLoader(
-            dataset = dataset[x],
-            batch_size = batch_size,
-            shuffle = True,
-            num_workers = n_workers['train'],
-            drop_last = isTrain,
-        ) for x in ['train', 'val']}
-
-    else:
-        dataset = ProjectedDataset(name=name, isTrain=False)
-
-        dataloader = DataLoader(
-            dataset = dataset,
-            batch_size = batch_size,
-            shuffle = True,
+            shuffle = False,
             num_workers = n_workers['test'],
             drop_last = False,
         )
     return dataloader
 
-
-
 class NormalDataset(Dataset):
     def __init__(self, isTrain):
         self.x = []
         self.y = []
-        self.dataroot = '/opt/ml/input/purified'
+        self.dataroot = dataroot
         self.n_class = 18
         self.isTrain = isTrain
         self._get_xy()
@@ -125,18 +106,20 @@ class NormalDataset(Dataset):
             return X, self.y[idx]
         
         else:
+            X = A.Normalize(mean=(0.5601, 0.5241, 0.5014), std=(0.2331, 0.2430, 0.2456))(image=X)['image']
+            X = AP.transforms.ToTensorV2()(image=X)['image']
             return X, fname
     
     def _preprocess(self, X: str)->Image:
-        X = A.CenterCrop(centsize,centsize)(image=X)['image']
-        X = A.Resize(256,256)(image=X)['image']
+        # X = A.CenterCrop(centsize,centsize)(image=X)['image']
+        X = A.Resize(basesize,basesize)(image=X)['image']
         return X
 
     def _get_xy(self):
         if self.isTrain:
             train_root = os.path.join(self.dataroot, 'train')
             for cls in range(self.n_class):
-                img_paths = glob(f'{train_root}/{cls}/**/*.*', recursive=True)
+                img_paths = glob(f'{train_root}/{cls}/**/*.*', recursive=recur)
                 self.x.extend( img_paths )
                 self.y.extend( [cls] * len(img_paths) )
         
@@ -146,12 +129,79 @@ class NormalDataset(Dataset):
             self.x = glob(f'{test_root}/*.*')
 
 
+class NormalDataset_oversampled(Dataset):
+    def __init__(self, isTrain):
+        self.x = []
+        self.y = []
+        self.dataroot = dataroot
+        self.n_class = 18
+        self.isTrain = isTrain
+        self.expand_ratio = 0.5
+        self._get_xy()
+        self.supl_trans = None
+
+    def __len__(self):
+        return len(self.x)
+    
+    def __getitem__(self, idx):
+        fname = self.x[idx].split('/')[-1]
+        X = np.array(Image.open(self.x[idx]))
+        X = self._preprocess(X)
+        
+        if self.isTrain:
+            X = baseA(image=X)['image']
+            return X, self.y[idx]
+        
+        else:
+            X = baseA(image=X)['image']
+            return X, fname
+    
+    def _preprocess(self, X: str)->Image:
+        # X = A.CenterCrop(centsize,centsize)(image=X)['image']
+        X = A.Resize(basesize,basesize)(image=X)['image']
+        return X
+
+    def _get_xy(self):
+        if self.isTrain:
+            cls_dist = []
+            train_root = os.path.join(self.dataroot, 'train')
+            for cls in range(self.n_class):
+                img_paths = glob(f'{train_root}/{cls}/*.*')
+                cls_dist.append(len(img_paths))
+                self.x.extend( img_paths )
+                self.y.extend( [cls] * len(img_paths) )
+            
+            supl_nums = self.get_supl_num(cls_dist)
+            for cls, supl_num in enumerate(supl_nums):
+                img_paths = glob(f'{train_root}/{cls}/*.*')
+                supl_paths = random.choices(img_paths, k=supl_num)
+                self.x.extend( supl_paths )
+                self.y.extend( [cls] * len(supl_paths) )
+        
+        # Test
+        else:
+            test_root = os.path.join(self.dataroot, 'test')
+            self.x = glob(f'{test_root}/*.*')
+
+    def get_supl_num(self, cls_dist: list)->list:
+        cls_dist = np.array(cls_dist)
+        supl_ratio = np.log( (cls_dist / np.max(cls_dist)) * 1e5)
+        supl_ratio = supl_ratio / np.max(supl_ratio)
+
+        threshold = np.zeros(shape=cls_dist.shape)
+        threshold.fill(1500)
+
+        supl_nums = (self.expand_ratio * (np.max(cls_dist) * supl_ratio * (cls_dist < threshold))).astype(np.int)
+
+        return supl_nums
+
+
 
 class ProjectedDataset(Dataset):
     def __init__(self, name, isTrain):
         self.x = []
         self.y = []
-        self.dataroot = '/opt/ml/input/purified'
+        self.dataroot = dataroot
         self.name = name
         self.n_class = 18
         self.isTrain = isTrain
@@ -172,8 +222,8 @@ class ProjectedDataset(Dataset):
             return X, fname
     
     def _preprocess(self, X)->Image:
-        X = A.CenterCrop(centsize,centsize)(image=X)['image']
-        X = A.Resize(256,256)(image=X)['image']
+        # X = A.CenterCrop(centsize,centsize)(image=X)['image']
+        X = A.Resize(basesize,basesize)(image=X)['image']
         return X
 
     def _get_xy(self):
@@ -202,7 +252,7 @@ class ProjectedDataset(Dataset):
                     if cls in g_cls: 
                         projected_cls = i
                 
-                img_paths = glob(f'{train_root}/{cls}/**/*.*', recursive=True)
+                img_paths = glob(f'{train_root}/{cls}/**/*.*', recursive=recur)
                 self.x.extend( img_paths )
                 self.y.extend( [projected_cls] * len(img_paths) )
         
@@ -210,6 +260,8 @@ class ProjectedDataset(Dataset):
         else:
             test_root = os.path.join(self.dataroot, 'test')
             self.x = glob(f'{test_root}/*.*')
+
+
 
 
 if __name__ == '__main__':
